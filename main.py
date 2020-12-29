@@ -1,6 +1,4 @@
 import os
-import time
-from datetime import datetime
 import pandas as pd
 
 from alpha_vantage.timeseries import TimeSeries
