@@ -1,13 +1,15 @@
 import os
 
-import systems
+import auth
+import interfaces
+import strategies
 
 def main():
-    shell_test = systems.ShellSystem(None)
-    symbols = shell_test.get_data()
+    paper = interfaces.Alpaca(auth.paper)
+    shell = strategies.ShellSystemTest(paper)
+    basic = strategies.BasicStrategy(paper)
 
-    for x in symbols:
-        print(x)
+    basic.system_loop()
 
 if __name__ == '__main__':
     main()
