@@ -1,7 +1,11 @@
 import abc
 
+import auth
 import data_scrapers
 import data_filters
+
+av = auth.av
+paper = auth.paper
 
 class ShellSystem:
     def __init__(self, api):

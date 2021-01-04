@@ -2,7 +2,6 @@ import os
 
 import systems
 
-
 def main():
     shell_test = systems.ShellSystem(None)
     symbols = shell_test.get_data()

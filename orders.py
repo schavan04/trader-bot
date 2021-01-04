@@ -1,10 +1,5 @@
 import abc
 
-import auth
-
-av = auth.av
-paper = auth.paper
-
 class TradingInterface(abc.ABC):
     @abc.abstractmethod
     def __init__(self, api):
