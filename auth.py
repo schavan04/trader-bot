@@ -6,7 +6,7 @@ import pandas as pd
 from alpha_vantage.timeseries import TimeSeries
 import alpaca_trade_api as tradeapi
 
-with open('keys.json', 'r') as f:
+with open('keys/keys.json', 'r') as f:
     data = json.load(f)
 
 for key, value in data.items():
