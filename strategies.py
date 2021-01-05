@@ -5,7 +5,7 @@ import threading
 import pandas as pd
 import numpy as np
 
-import data_scrapers
+import data_filters
 
 class PMStrategy(abc.ABC):
     @abc.abstractmethod
@@ -21,10 +21,10 @@ class ShellSystemTest(PMStrategy):
         super().__init__(interface)
 
     def get_buyable_stocks(self, quantity, price):
-        symbols = data_scrapers.get_yf_gainers(quantity, price)
+        symbols = data_filters.get_yf_gainers(quantity, price)
         approved = []
         for symbol in symbols:
-            rating = data_scrapers.check_rating(symbol)
+            rating = data_filters.check_rating(symbol)
             if rating < 2.4:
                 approved.append(symbol)
         return approved
@@ -50,8 +50,8 @@ class BasicStrategy(PMStrategy):
 
     def get_buyable_stocks(self, quantity, price):
         time.sleep(1)
-        symbols = data_scrapers.get_yf_gainers(quantity, price)
-        approved = data_scrapers.check_rating(symbols)
+        symbols = data_filters.get_yf_gainers(quantity, price)
+        approved = data_filters.check_rating(symbols)
         return approved
 
     def get_barset(self, symbol):
