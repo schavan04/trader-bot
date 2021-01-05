@@ -7,13 +7,6 @@ import numpy as np
 
 import data_scrapers
 
-# place_buy_order(self, symbol, quantity): return order
-# place_sell_order(self, symbol, quantity): return order
-# list_all_orders(self): return order[]
-# get_order_by_id(self, id): return order
-# list_all_positions(self): return position[]
-# get_position(self, symbol): return position
-
 class PMStrategy(abc.ABC):
     @abc.abstractmethod
     def __init__(self, interface):
