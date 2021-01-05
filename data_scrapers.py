@@ -36,13 +36,22 @@ def get_yf_gainers(quantity, price):
     finally:
         driver.quit()
 
-def check_rating(symbol):
+def check_rating(symbols):
     driver = webdriver.Chrome(options=options, executable_path='/Users/Admin/UserDrivers/chromedriver')
     try:
-        driver.get(f'https://finance.yahoo.com/quote/{symbol}?p={symbol}&.tsrc=fin-srch')
-        time.sleep(2)
-        driver.execute_script("window.scrollTo(0, 1080)")
-        rating = driver.find_element_by_xpath('//*[@id="Col2-8-QuoteModule-Proxy"]/div/section/div/div/div[1]')
-        return float(rating.text)
+        approved = []
+        for symbol in symbols:
+            driver.get(f'https://finance.yahoo.com/quote/{symbol}?p={symbol}&.tsrc=fin-srch')
+            time.sleep(1)
+            driver.execute_script("window.scrollTo(0, 1080)")
+            time.sleep(2)
+            rating = driver.find_element_by_xpath('//*[@id="Col2-8-QuoteModule-Proxy"]/div/section/div/div/div[1]')
+            time.sleep(2)
+            if float(rating.text) < 2.4:
+                approved.append(symbol)
+                print(symbol + " approved for buy")
+            else:
+                print(symbol + " not recommended")
+        return approved
     finally:
         driver.quit()

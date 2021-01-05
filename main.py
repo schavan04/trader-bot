@@ -5,7 +5,10 @@ import interfaces
 import strategies
 
 def main():
-    paper = interfaces.Alpaca(auth.paper)
+    print(auth.paper.get_account().status)
+
+    paper = interfaces.Alpaca(auth.paper) # Temporary line to ensure API functionality
+
     shell = strategies.ShellSystemTest(paper)
     basic = strategies.BasicStrategy(paper)
 

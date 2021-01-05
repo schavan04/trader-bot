@@ -20,13 +20,19 @@ class ShellSystemTest(PMStrategy):
     def __init__(self, interface):
         super().__init__(interface)
 
-    def get_tradeable_stocks(self):
-        symbols = data_scrapers.get_yf_gainers(quantity=5, price=200)
-        return symbols
+    def get_buyable_stocks(self, quantity, price):
+        symbols = data_scrapers.get_yf_gainers(quantity, price)
+        approved = []
+        for symbol in symbols:
+            rating = data_scrapers.check_rating(symbol)
+            if rating < 2.4:
+                approved.append(symbol)
+        return approved
 
-    def system_loop(self): # gets top 5 gainers from YF and buys the first one
-        symbols = self.get_tradeable_stocks()
-        self.interface.market_order(str(symbols[0]), 1, 'buy')
+    def system_loop(self): # gets top gainers from YF and buys the first one
+        symbols = self.get_buyable_stocks(10, 200)
+        for x in symbols:
+            print(x)
 
 class BasicStrategy(PMStrategy):
     def __init__(self, interface):
@@ -42,9 +48,11 @@ class BasicStrategy(PMStrategy):
             time_to_open = (clock.next_open - clock.timestamp).total_seconds()
             time.sleep(round(time_to_open))
 
-    def get_tradeable_stocks(self):
-        symbols = data_scrapers.get_yf_gainers(quantity=5, price=200)
-        return symbols
+    def get_buyable_stocks(self, quantity, price):
+        time.sleep(1)
+        symbols = data_scrapers.get_yf_gainers(quantity, price)
+        approved = data_scrapers.check_rating(symbols)
+        return approved
 
     def get_barset(self, symbol):
         data = self.interface.get_data(symbol)
@@ -55,7 +63,7 @@ class BasicStrategy(PMStrategy):
         }
         return bar
 
-    def place_order(self, symbol, quantity, direction):
+    def place_multi_order(self, symbol, quantity, direction):
         # if self.time_until_market_close() > 120:
             bar = self.get_barset(symbol)
             margin = float(bar['high']) - float(bar['low'])
@@ -78,5 +86,9 @@ class BasicStrategy(PMStrategy):
         #     return False
 
     def system_loop(self):
-        symbols = self.get_tradeable_stocks()
-        self.place_order(symbols[1], 1, 'buy')
+        # approved_symbols = self.get_buyable_stocks(5, 150)
+        # print("Approved stocks:")
+        # for x in approved_symbols:
+        #     print(x)
+        # self.place_multi_order(approved_symbols[0], 5, 'buy')
+        # print(f'Bought 5 of {approved_symbols[0]}')
