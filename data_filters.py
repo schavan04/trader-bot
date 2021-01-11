@@ -6,7 +6,7 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 
 options = Options()
-options.headless = True
+options.headless = False
 options.add_argument("window-size=1920,1080")
 
 def get_yf_gainers(quantity, price):

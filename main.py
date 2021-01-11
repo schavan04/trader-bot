@@ -12,7 +12,7 @@ def main():
     shell = strategies.ShellSystemTest(paper)
     basic = strategies.BasicStrategy(paper)
 
-    basic.system_loop()
+    shell.system_loop()
 
 if __name__ == '__main__':
     main()

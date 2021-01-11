@@ -29,8 +29,8 @@ class ShellSystemTest(PMStrategy):
                 approved.append(symbol)
         return approved
 
-    def system_loop(self): # gets top gainers from YF and buys the first one
-        symbols = self.get_buyable_stocks(10, 200)
+    def system_loop(self):
+        symbols = self.get_buyable_stocks(3, 200)
         for x in symbols:
             print(x)
 
@@ -92,3 +92,4 @@ class BasicStrategy(PMStrategy):
         #     print(x)
         # self.place_multi_order(approved_symbols[0], 5, 'buy')
         # print(f'Bought 5 of {approved_symbols[0]}')
+        pass
