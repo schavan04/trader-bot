@@ -4,9 +4,10 @@ from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
+from selenium.common.exceptions import NoSuchElementException
 
 options = Options()
-options.headless = False
+options.headless = True
 options.add_argument("window-size=1920,1080")
 
 def get_yf_gainers(quantity, price):
@@ -31,7 +32,6 @@ def get_yf_gainers(quantity, price):
                 symbols.append(gainers[counter].text)
                 valid += 1
             counter += 1
-
         return symbols
     finally:
         driver.quit()
@@ -45,13 +45,16 @@ def check_rating(symbols):
             time.sleep(1)
             driver.execute_script("window.scrollTo(0, 1080)")
             time.sleep(2)
-            rating = driver.find_element_by_xpath('//*[@id="Col2-8-QuoteModule-Proxy"]/div/section/div/div/div[1]')
-            time.sleep(2)
-            if float(rating.text) < 2.4:
-                approved.append(symbol)
-                print(symbol + " approved for buy")
-            else:
-                print(symbol + " not recommended")
+            try:
+                rating = driver.find_element_by_xpath('//*[@id="Col2-8-QuoteModule-Proxy"]/div/section/div/div/div[1]')
+                time.sleep(2)
+                if float(rating.text) < 2.4:
+                    approved.append(symbol)
+                    print(symbol + " approved for buy")
+                else:
+                    print(symbol + " not recommended")
+            except NoSuchElementException:
+                print(symbol + " does not have a recommendation rating")
         return approved
     finally:
         driver.quit()

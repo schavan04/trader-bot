@@ -22,11 +22,7 @@ class ShellSystemTest(PMStrategy):
 
     def get_buyable_stocks(self, quantity, price):
         symbols = data_filters.get_yf_gainers(quantity, price)
-        approved = []
-        for symbol in symbols:
-            rating = data_filters.check_rating(symbol)
-            if rating < 2.4:
-                approved.append(symbol)
+        approved = data_filters.check_rating(symbols)
         return approved
 
     def system_loop(self):
