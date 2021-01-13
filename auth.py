@@ -3,6 +3,7 @@ import json
 
 from alpha_vantage.timeseries import TimeSeries
 import alpaca_trade_api as tradeapi
+import yfinance as yf
 
 # Storing the api keys in a json file and setting them as environment variables
 # because I am lazy and don't want to set them every time through command line
