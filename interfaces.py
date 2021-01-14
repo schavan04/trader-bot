@@ -15,17 +15,25 @@ class MainInterface(object):
         clock = self.api.get_clock()
         return clock
 
-    def get_apca_data(self, symbol, timeframe=None, limit=None):
+    def get_apca_data(self, symbol, timeframe=None, limit=None, start=None, end=None, after=None, until=None):
         if timeframe is None:
             timeframe = 'minute'
         if limit is None:
             limit = 500
-        symbol_data = self.api.get_barset(symbol, timeframe, limit)
+        symbol_data = self.api.get_barset(symbol, timeframe=timeframe, limit=limit, start=start, end=end, after=after, until=until)
         return symbol_data
+
+    def get_asset(self, symbol):
+        asset = self.api.get_asset(symbol)
+        return asset
 
     def get_last_quote(self, symbol):
         last = self.api.get_last_quote(symbol)
-        return last.askprice
+        return last
+
+    def get_last_trade(self, symbol):
+        last = self.api.get_last_trade(symbol)
+        return last
 
     # def multi_order(self, symbol, quantity, direction, stop_price, limit_price):
     #     order = self.api.submit_order(symbol=symbol,

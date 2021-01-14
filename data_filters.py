@@ -40,7 +40,7 @@ def get_yf_gainers(price):
     finally:
         driver.quit()
 
-def check_rating(symbols, quantity):
+def check_rating(symbols, quantity, checkapi):
 
     if quantity > len(symbols):
         quantity = len(symbols)
@@ -56,21 +56,26 @@ def check_rating(symbols, quantity):
 
         while valid < quantity:
             symbol = symbols[counter]
+
+            tradable = checkapi.get_asset(symbol).tradable
+
             driver.get(f'https://finance.yahoo.com/quote/{symbol}?p={symbol}&.tsrc=fin-srch')
             time.sleep(1)
             driver.execute_script("window.scrollTo(0, 1080)")
             time.sleep(2)
+
             try:
                 rating = driver.find_element_by_xpath('//*[@id="Col2-8-QuoteModule-Proxy"]/div/section/div/div/div[1]')
                 time.sleep(2)
-                if float(rating.text) < 2.8:
+                if float(rating.text) < 2.7 and tradable:
                     approved.append(symbol)
                     valid += 1
-                    print(symbol + " approved for buy")
+                    print(f"    - {symbol} recommended")
                 else:
-                    print(symbol + " not recommended")
+                    print(f"    - {symbol} not recommended")
+
             except NoSuchElementException:
-                print(symbol + " does not have a recommendation rating")
+                print(f"    - {symbol} does not have a recommendation rating")
 
             counter +=1
 
