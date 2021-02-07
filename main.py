@@ -22,18 +22,26 @@ def main():
 
     if args == '-t' or args == '--test':
         print("Executing in test mode...")
-        bollinger.system_test()
+        try:
+            bollinger.system_test()
+        except KeyboardInterrupt:
+            print("\nExiting...")
+
+    elif args == '-g' or args == '--graph':
+        print("Executing graphs...")
+        focus = ['BILL', 'SAM', 'ZM', 'SGEN', 'LGND']
+        bollinger.system_graph(focus)
         print("Exiting...")
 
     else:
-        print("Executing normally...")
+        print("Executing...")
         while True:
             try:
                 bollinger.system_loop()
+                # Execute system graph using subprocess and popen OR use threads
             except KeyboardInterrupt:
-                break
-            finally:
                 print("\nExiting...")
+                break
 
 if __name__ == '__main__':
     main()

@@ -37,7 +37,7 @@ class Strategy(object):
         clock = self.interface.get_clock()
         if clock.is_open:
             time_to_close = math.ceil((clock.next_close - clock.timestamp).total_seconds())
-            print(f'    @ {time_to_open} seconds until close')
+            return time_to_close
         else:
             return 0
 
@@ -45,7 +45,6 @@ class Strategy(object):
         clock = self.interface.get_clock()
         if not clock.is_open:
             time_to_open = math.ceil((clock.next_open - clock.timestamp).total_seconds())
-            print(f'    @ {time_to_open} seconds until open')
             return time_to_open
         else:
             return 0
@@ -291,31 +290,8 @@ class BollingerShortTerm(Strategy):
     def __init__(self, interface):
         super().__init__(interface)
         self.NUMBER = 5
-
-    def time_until_market_close(self):
-        clock = self.interface.get_clock()
-        if clock.is_open:
-            time_to_close = math.ceil((clock.next_close - clock.timestamp).total_seconds())
-            print(f'    @ {time_to_open} seconds until close')
-        else:
-            return 0
-
-    def time_until_market_open(self):
-        clock = self.interface.get_clock()
-        if not clock.is_open:
-            time_to_open = math.ceil((clock.next_open - clock.timestamp).total_seconds())
-            print(f'    @ {time_to_open} seconds until open')
-            return time_to_open
-        else:
-            return 0
-
-    def get_buyable_stocks(self, price):
-        symbols = data_filters.get_yf_gainers(price)
-        return symbols
-
-    def run_ratings_filter(self, symbols, quantity):
-        approved = data_filters.check_rating(symbols, quantity, self.interface)
-        return approved
+        self.held = {}
+        self.hit_top = {}
 
     def old_switches(self, data):
         # Buys when price dips below lower band when not owned
@@ -357,7 +333,7 @@ class BollingerShortTerm(Strategy):
 
         buy_signal = []
         sell_signal = []
-        held = False
+        held = True
         hit_top = False
 
         for i in range(len(data)):
@@ -385,22 +361,23 @@ class BollingerShortTerm(Strategy):
 
         return (buy_signal, sell_signal)
 
-    def switch_point(self, datapoint, held, hit_top):
+    def switch_point(self, datapoint):
         symbol = datapoint.columns[0]
         last_trade_price = self.interface.get_last_trade(symbol).price
 
         if last_trade_price >= datapoint['upper'].item():
-            if held[symbol] and not hit_top[symbol]:
-                hit_top[symbol] = True
-            return None
-        elif last_trade_price <= datapoint['lower'].item():
-            if not held[symbol]:
-                held[symbol] = True
-                return 'buy'
-            elif hit_top[symbol]:
-                held[symbol] = False
-                hit_top[symbol] = False
+            # if self.held[symbol] and not self.hit_top[symbol]:
+            if self.held[symbol]:
+                # self.hit_top[symbol] = True
                 return 'sell'
+            else:
+                return None
+        elif last_trade_price <= datapoint['lower'].item():
+            if not self.held[symbol]:
+                return 'buy'
+            # elif self.hit_top[symbol]:
+            #     self.hit_top[symbol] = False
+            #     return 'sell'
             else:
                 return None
         else:
@@ -422,9 +399,10 @@ class BollingerShortTerm(Strategy):
 
     def plot_band(self, symbol):
         yesterday = datetime.today() - timedelta(days=1)
+        today = datetime.today()
         now = datetime.now()
-        market_open = pd.Timestamp(yesterday.replace(hour=9, minute=30, second=0).strftime('%Y-%m-%d-%H:%M:%S'), tz='America/New_York').isoformat()
-        market_close = pd.Timestamp(yesterday.replace(hour=16, minute=0, second=0).strftime('%Y-%m-%d-%H:%M:%S'), tz='America/New_York').isoformat()
+        market_open = pd.Timestamp(today.replace(hour=9, minute=30, second=0).strftime('%Y-%m-%d-%H:%M:%S'), tz='America/New_York').isoformat()
+        market_close = pd.Timestamp(today.replace(hour=16, minute=0, second=0).strftime('%Y-%m-%d-%H:%M:%S'), tz='America/New_York').isoformat()
         start = pd.Timestamp((now - timedelta(hours=1)).strftime('%Y-%m-%d-%H:%M:%S'), tz='America/New_York').isoformat()
         end = pd.Timestamp((now).strftime('%Y-%m-%d-%H:%M:%S'), tz='America/New_York').isoformat()
 
@@ -464,101 +442,230 @@ class BollingerShortTerm(Strategy):
 
         return None
 
+    def place_order(self, symbol, dir):
+        if not dir:
+            print(" None")
+        else:
+            if self.positions and dir == 'sell':
+                for position in self.positions:
+                    if position.symbol == symbol:
+                        qty = position.qty
+            elif dir == 'buy':
+                qty = int(self.individual_power / self.interface.get_last_trade(symbol).price)
+            try:
+                order = self.interface.market_order(symbol=symbol, quantity=qty, direction=dir)
+                self.held[symbol] = not self.held[symbol]
+                print(f" {dir.capitalize()} {order.qty} share(s)")
+            except APIError as e:
+                self.held[symbol] = not self.held[symbol]
+                if self.held[symbol]:
+                    self.hit_top[symbol] = not self.hit_top[symbol]
+                print(" Error:", e)
+
+    def test_order(self, symbol, dir):
+        if not dir:
+            print(" None")
+        else:
+            if self.positions and dir == 'sell':
+                for position in self.positions:
+                    if position.symbol == symbol:
+                        qty = position.qty
+            elif dir == 'buy':
+                qty = int(self.individual_power / self.interface.get_last_trade(symbol).price)
+            try:
+                # order = self.interface.market_order(symbol=symbol, quantity=qty, direction=dir)
+                self.held[symbol] = not self.held[symbol]
+                print(f" {dir.capitalize()} {'x'} share(s)")
+            except APIError as e:
+                self.held[symbol] = not self.held[symbol]
+                if self.held[symbol]:
+                    self.hit_top[symbol] = not self.hit_top[symbol]
+                print(" Error:", e)
+
+    def system_graph(self, focus):
+        for s in focus:
+            self.plot_band(s)
+
     def system_test(self):
-        # gainers = self.get_buyable_stocks(200)
-        # todays_focus = self.run_ratings_filter(gainers, 5)
-        # print(f"+ Today's focus: {todays_focus}")
-        # for x in todays_focus:
-        #     self.plot_band(x)
-
-        self.plot_band('PTON')
-
-    def system_loop(self):
         print("* Waiting for market to open...")
-        time.sleep(self.time_until_market_open())
+        time_to_open = self.time_until_market_open()
+        print(f'    @ {time_to_open} seconds until open')
+        # time.sleep(time_to_open)
 
         print("* Market open, initializing system...")
-        time.sleep(10)
+        time.sleep(3)
 
         print("$ Liquidating all positions...")
-        positions = self.interface.list_all_positions()
-        if positions:
-            for position in positions:
-                self.interface.market_order(symbol=position.symbol, quantity=position.qty, direction='sell')
-                print(f"    - Liquidated {position.symbol}")
+        self.positions = self.interface.list_all_positions()
+        if self.positions:
+            for position in self.positions:
+                # self.interface.market_order(symbol=position.symbol, quantity=position.qty, direction='sell')
+                print(f"    -  {position.symbol}: Liquidate {'x'} shares")
         else:
             print("    - No positions!")
+        time.sleep(3)
 
-        print("* Waiting for 15 mins...")
-        time.sleep(900)
+        self.total_buying_power = self.interface.get_account().cash
+        self.individual_power = math.floor((float(self.total_buying_power) / float(self.NUMBER)) - 5.0)
 
-        total_buying_power = self.interface.get_account().buying_power
-        individual_power = math.floor((float(total_buying_power) / float(self.NUMBER)) - 5.0)
+        # print("* Waiting for 2 mins...")
+        # time.sleep(120)
 
-        print(f"$ Getting today's top {self.NUMBER} gainers under {individual_power}...")
-        gainers = self.get_buyable_stocks(individual_power)
-        todays_focus = self.run_ratings_filter(gainers, self.NUMBER)
+        print(f"$ Getting today's top {self.NUMBER} gainers under ${self.individual_power}...")
+        gainers = self.get_buyable_stocks(self.individual_power)
+        self.todays_focus = self.run_ratings_filter(gainers, self.NUMBER)
+        time.sleep(3)
 
         print("$ Today's parameters:")
-        print(f"    - Stocks to focus on: {todays_focus}")
-        print(f"    - Buying power per stock: {individual_power}")
+        print(f"    - Stocks to focus on: {self.todays_focus}")
+        print(f"    - Buying power per stock: ${self.individual_power}")
+        time.sleep(3)
+
+        print("$ Buying all focused stocks...")
+        for symbol in self.todays_focus:
+            qty = int(self.individual_power / self.interface.get_last_trade(symbol).price)
+            try:
+                # order = self.interface.market_order(symbol=symbol, quantity=qty, direction='buy')
+                print(f"    - {symbol}: Buy {'x'} shares")
+            except APIError as e:
+                print(" Error:", e)
+        time.sleep(3)
 
         print("* Beginning algorithm loop...")
 
-        held = {}
-        hit_top = {}
-        for symbol in todays_focus:
-            held[symbol] = False
-            hit_top[symbol] = False
+        for symbol in self.todays_focus:
+            self.held[symbol] = False
+            self.hit_top[symbol] = False
 
-        while self.interface.get_clock().is_open and self.time_until_market_close() > 120:
-            now = (datetime.utcnow() - timedelta(hours=8)).strftime('%b %d, %Y at %-I:%M:%S %p')
-            print(f"* {now}")
+        while True:
+            self.last_loop = (datetime.utcnow() - timedelta(hours=8)).strftime('%b %d, %Y at %-I:%M:%S %p')
+            print(f"@ {self.last_loop}:")
 
             owned = []
-            for key, value in held.items():
+            for key, value in self.held.items():
                 if value:
                     owned.append(key)
             print(f"    - Held: {owned}")
 
-            positions = self.interface.list_all_positions()
+            self.positions = self.interface.list_all_positions() # HERE FOR A REASON
 
-            for symbol in todays_focus:
+            for symbol in self.todays_focus:
                 print(f"    - {symbol}:", end='')
 
                 data = self.calculate_band(symbol)
                 if not data.empty:
                     last_datapoint = data.tail(1)
-                    direction = self.switch_point(last_datapoint, held, hit_top)
-                    qty = 0
+                    dir = self.switch_point(last_datapoint)
                     # print(current_datapoint)
-                    if not direction:
-                        print(" None")
-                    else:
-                        if positions and direction == 'sell':
-                            for position in positions:
-                                if position.symbol == symbol:
-                                    qty = position.qty
-                        elif direction == 'buy':
-                            qty = int(individual_power / self.interface.get_last_trade(symbol).price)
-                        try:
-                            order = self.interface.market_order(symbol=symbol, quantity=qty, direction=direction)
-                            print(f" Placed {direction.capitalize()} order for {order.qty} share(s)")
-                        except APIError as e:
-                            print(" Error:", e)
+                    self.test_order(symbol, dir)
                 else:
                     print(f" Data empty")
 
-            time.sleep(60)
+            time.sleep(2)
 
         print("$ Market closing soon, liquidating all positions...")
-        positions = self.interface.list_all_positions()
-        if positions:
-            for position in positions:
+        self.positions = self.interface.list_all_positions()
+        if self.positions:
+            for position in self.positions:
                 self.interface.market_order(symbol=position.symbol, quantity=position.qty, direction='sell')
-                print(f"    - Liquidated {position.symbol}")
+                print(f"    -  {position.symbol}: Liquidate {'x'} shares")
         else:
             print("    - No positions!")
 
         print("* Waiting until close...")
-        time.sleep(self.time_until_market_close())
+        time_to_close = self.time_until_market_close()
+        print(f'    @ {time_to_close} seconds until close')
+        time.sleep(time_to_close)
+        #END
+
+    def system_loop(self):
+        print("* Waiting for market to open...")
+        time_to_open = self.time_until_market_open()
+        print(f'    @ {time_to_open} seconds until open')
+        time.sleep(time_to_open)
+
+        print("* Market open, initializing system...")
+        time.sleep(3)
+
+        print("$ Liquidating all positions...")
+        self.positions = self.interface.list_all_positions()
+        if self.positions:
+            for position in self.positions:
+                order = self.interface.market_order(symbol=position.symbol, quantity=position.qty, direction='sell')
+                print(f"    -  {order.symbol}: Liquidate {order.qty} shares")
+        else:
+            print("    - No positions!")
+        time.sleep(3)
+
+        self.total_buying_power = self.interface.get_account().cash
+        self.individual_power = math.floor((float(self.total_buying_power) / float(self.NUMBER)) - 5.0)
+
+        print("* Waiting for 15 mins...")
+        time.sleep(900)
+
+        print(f"$ Getting today's top {self.NUMBER} gainers under ${self.individual_power}...")
+        gainers = self.get_buyable_stocks(self.individual_power)
+        self.todays_focus = self.run_ratings_filter(gainers, self.NUMBER)
+        time.sleep(3)
+
+        print("$ Today's parameters:")
+        print(f"    - Stocks to focus on: {self.todays_focus}")
+        print(f"    - Buying power per stock: ${self.individual_power}")
+        time.sleep(3)
+
+        # print("$ Buying all focused stocks...")
+        # for symbol in self.todays_focus:
+        #     qty = int(self.individual_power / self.interface.get_last_trade(symbol).price)
+        #     try:
+        #         order = self.interface.market_order(symbol=symbol, quantity=qty, direction='buy')
+        #         print(f"    - {order.symbol}: Buy {order.qty} shares")
+        #     except APIError as e:
+        #         print(" Error:", e)
+        # time.sleep(3)
+
+        print("* Beginning algorithm loop...")
+
+        for symbol in self.todays_focus:
+            self.held[symbol] = False
+            self.hit_top[symbol] = False
+
+        while self.interface.get_clock().is_open and self.time_until_market_close() > 30:
+            self.last_loop = (datetime.utcnow() - timedelta(hours=8)).strftime('%b %d, %Y at %-I:%M:%S %p')
+            print(f"@ {self.last_loop}:")
+
+            owned = []
+            for key, value in self.held.items():
+                if value:
+                    owned.append(key)
+            print(f"    - Held: {owned}")
+
+            self.positions = self.interface.list_all_positions() # HERE FOR A REASON
+
+            for symbol in self.todays_focus:
+                print(f"    - {symbol}:", end='')
+
+                data = self.calculate_band(symbol)
+                if not data.empty:
+                    last_datapoint = data.tail(1)
+                    dir = self.switch_point(last_datapoint)
+                    # print(current_datapoint)
+                    self.place_order(symbol, dir)
+                else:
+                    print(f" Data empty")
+
+            time.sleep(10)
+
+        print("$ Market closing soon, liquidating all positions...")
+        self.positions = self.interface.list_all_positions()
+        if self.positions:
+            for position in self.positions:
+                order = self.interface.market_order(symbol=position.symbol, quantity=position.qty, direction='sell')
+                print(f"    -  {order.symbol}: Liquidate {order.qty} shares")
+        else:
+            print("    - No positions!")
+
+        # print("* Waiting until close...")
+        time_to_close = self.time_until_market_close()
+        # print(f'    @ {time_to_close} seconds until close')
+        time.sleep(time_to_close)
+        #END
