@@ -3,7 +3,7 @@ import sys
 
 import auth
 import interfaces
-import strategies
+import loop
 
 def main():
     os.system('clear')
@@ -12,9 +12,7 @@ def main():
 
     main_inter = interfaces.MainInterface(auth.paper)
 
-    basic = strategies.Basic(main_inter)
-    movingavg = strategies.MovingAvgDay(main_inter)
-    bollinger = strategies.BollingerShortTerm(main_inter)
+    main = loop.Loop(main_inter)
 
     args = None
     if len(sys.argv) >= 2:
@@ -23,22 +21,22 @@ def main():
     if args == '-t' or args == '--test':
         print("Executing in test mode...")
         try:
-            bollinger.system_test()
+            main.system_test()
         except KeyboardInterrupt:
             print("\nExiting...")
 
     elif args == '-g' or args == '--graph':
         print("Executing graphs...")
-        focus = ['BILL', 'SAM', 'ZM', 'SGEN', 'LGND']
-        bollinger.system_graph(focus)
+        focus = ['TYL', 'TWLO', 'FUTU', 'NVDA', 'MDB']
+        main.system_graph(focus)
         print("Exiting...")
 
     else:
         print("Executing...")
         while True:
             try:
-                bollinger.system_loop()
-                # Execute system graph using subprocess and popen OR use threads
+                main.system_loop()
+                # Execute system graph simultaneously
             except KeyboardInterrupt:
                 print("\nExiting...")
                 break
